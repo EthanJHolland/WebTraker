@@ -2,9 +2,31 @@
     "name": "New Tab Page",
     "description": "Override the new tab page with a blank one",
     "version": "1.0",
+    "manifest_version": 2,
     "incognito": "split",
     "chrome_url_overrides": {
       "newtab": "index.html"
     },
-    "manifest_version": 2
+    "content_scripts": [
+        {
+            "js": ["scripts/wikipedia.js"],
+            "matches": ["https://*.wikipedia.org/wiki/*"]
+        },
+        {
+            "js": ["scripts/quora.js"],
+            "matches": ["https://www.quora.com/*"]
+        },
+        {
+            "js": ["scripts/stackexchange.js"],
+            "matches": [
+                "https://*.stackexchange.com/questions/*",
+                "https://*.stackoverflow.com/questions/*",
+                "https://serverfault.com/questions/*",
+                "https://superuser.com/questions/*",
+                "https://askubuntu.com/questions/*",
+                "https://stackapps.com/questions/*",
+                "https://mathoverflow.net/questions/*"
+            ]
+        }
+    ]
   }
