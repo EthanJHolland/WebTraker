@@ -10,6 +10,7 @@
     "permissions": [
         "storage"
     ],
+    "content_security_policy": "script-src 'self' https://cdn.anychart.com; object-src 'self'",
     "content_scripts": [
         {
             "js": ["scripts/wikipedia.js"],
