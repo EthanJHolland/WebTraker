@@ -5,7 +5,7 @@ function main(){
         if(res && res.active){
             console.log(topN(res.pages,5))
             console.log(topN(res.categories,5))
-            treeMap(res.categories)
+            fillList(topN(res.pages,5))
         }
     })
 }
@@ -22,37 +22,36 @@ function topN(dict,n){
     });
     
     // Create a new array with only the first 5 items
-    return items.slice(0,n);
+    return items.slice(0,n).map((a)=>a[0]);
 }
 
-function treeMap(dict){
-    //convert dict to needed format
-    children=[]
-    Object.keys(dict).forEach((key)=>{
-        children.push({name: key, value: dict[key]})
-    });
+//based on https://stackoverflow.com/questions/247483/http-get-request-in-javascript
+var HttpClient = function() {
+    this.get = function(aUrl, aCallback) {
+        var anHttpRequest = new XMLHttpRequest();
+        anHttpRequest.onreadystatechange = function() { 
+            if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
+                aCallback(JSON.parse(anHttpRequest.responseText));
+        }
 
-    var data = [{children: children}];
-    
-    // create a chart and set the data
-    chart = anychart.treeMap(data, "as-tree");
+        anHttpRequest.open("GET", aUrl, true);            
+        anHttpRequest.send( null );
+    }
+}
 
-    // configure labels
-    chart.labels().useHtml(true);
-    chart.labels().format(function(){
-        return "<span style='font-weight:bold'>"+this.name+"</span>";
-    });
-
-    // configure tooltips
-    chart.tooltip().format(function() {
-        return "Pages in this category: "+this.value;
-    });
-    
-    // set the container id
-    chart.container("container");
-    
-    // initiate drawing the chart
-    chart.draw();
+function fillList(articles){
+    var client = new HttpClient();
+    for(var i=0; i<articles.length; i++){
+        ((index) => {
+            client.get('https://en.wikipedia.org/api/rest_v1/page/summary/'+articles[index], (wiki_response) => {
+                document.getElementById('title'+index).textContent=wiki_response.title;
+            if(wiki_response.thumbnail){
+                    document.getElementById('image'+index).src=wiki_response.thumbnail.source;
+            }
+                document.getElementById('desc'+index).innerHTML=wiki_response.extract_html;
+        });
+        })(i);
+    }
 }
 
 main();
