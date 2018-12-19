@@ -1,64 +1,32 @@
+const storage = chrome.storage.local //use local storage
+
 function main(site){
+    const now = Date.now(); //use same time for all pages/cats
+
     //before doing anything, ensure site is active
-    chrome.storage.local.get([activeKey(site)], (res)=>{
+    storage.get([activeKey(site)], (res)=>{
         if(res && res[activeKey(site)]){
             //extract information from site
             const page=site.getTitle();
             const cats=site.getCategories();
 
-
-            //update page count and top 10
-            const pageKey = hashKey(site,page,true)
-            chrome.storage.local.get([pageKey], (res)=>{
-                //update counters
-                var newCount; //number of times page has been visited
-                if(res && res[pageKey]){
-                    //already exists
-                    newCount = res[pageKey]+1;
-                }else{
-                    //first visit
-                    newCount = 1;
-                }
-                chrome.storage.local.set({[pageKey]: newCount})
-                
-                //update top 10
-                updateTopNth(site, page, newCount, 0) //start at smallest
-            })
-
-            //update most recent
-            chrome.storage.local.get([recentCounterKey(site)], (counterRes)=>{
-                //determine new counter
-                var newCounter;
-                if(counterRes && counterRes[recentCounterKey(site)]){
-                    newCounter = (counterRes[recentCounterKey(site)]+1)%10;
-                }else{
-                    newCounter = 1; //arbitrarily start at 1
-                }
-
-                //write new counter
-                chrome.storage.local.set({[recentCounterKey(site)]: newCounter})
-
-                //write data to new counter location
-                chrome.storage.local.set({[recentKey(site, newCounter)]: page})
-            });
+            //get keys which need updating
+            var keys = [];
+            if(site.storeCats) keys = cats.map((cat) => hashKey(site,cat,false));
+            if(site.storePages) keys.push(hashKey(site,page,true)) //append key for the page title
             
-            //update count and top 10 for each category
-            for(let cat of cats){
-                catKey = hashKey(site,cat,false)
-                chrome.storage.local.get([catKey], (res)=>{
-                    //update counters
-                    var newCount; //number of times page has been visited
-                    if(res && res[catKey]){
+            //update value for each key
+            for(let key of keys){
+                storage.get([key], (res)=>{
+                    var newCount; //update counter
+                    if(res && res[key]){
                         //already exists
-                        newCount = res[catKey]+1;
+                        newCount = res[key].count+1;
                     }else{
                         //first visit
                         newCount = 1;
                     }
-                    chrome.storage.local.set({[catKey]: newCount})
-                    
-                    //update top 10
-                    updateTopNth(site, cat, newCount, 0) //start at smallest
+                    storage.set({[key]: {count: newCount, visited: now}})
                 })            
             }
         }else{
@@ -77,103 +45,49 @@ function activeKey(site){
     return site.key+'ia'
 }
 
-function recentCounterKey(site){
-    return site.key+'rc'
-}
-
-function recentKey(site, n){
-    return site.key+'re'+n
-}
-
-function topKey(site, n, isPage){
-    if(isPage)return site.key+'pg'+'to'+n //page
-    return site.key+'ct'+'to'+n //category
+function isHashKey(site, key, isPage){
+    return key === hashKey(site, extractName(key), isPage) 
 }
 
 function extractName(key){
-    return key.substring(key.indexOf('_')) //remove header
+    return key.substring(key.indexOf('_')+1) //remove header
 }
 
 //*** site status manipulation ***// 
 function activate(site){
-    chrome.storage.local.set({[activeKey(site)]: true});
+    storage.set({[activeKey(site)]: true});
 }
 
 function deactivate(site){
-    chrome.storage.local.set({[activeKey(site)]: false});
+    storage.set({[activeKey(site)]: false});
 }
-
-//*** update top 10 ***/
-function updateTopNth(site, page, n){
-
-}
-
 
 //*** top 10 extraction ***// 
-function top10(site, isPages){
-    if((isPages && site.storePages) ||(!isPages && site.storeCats)) topNth(site, 0, isPages);
-}
-
-function topNth(site, n, isPage){
-    if(n < 10){
-        const key = topNthKey(site, n, isPages);
-        chrome.storage.local.get([key], (res)=>{
-            console.log(res[key])
-            topNth(site, n+1, isPage) //recursively get next
-        })
+function topN(site, n, isPages){
+    if((isPages && site.storePages) ||(!isPages && site.storeCats)){
+        storage.get(null, (res) => { //get all items
+            const keys = Object.keys(res).filter((key) => isHashKey(site, key, isPages)) //extract keys of the type we are looking for
+            keys.sort((a,b) => res[b].count - res[a].count); //works just like Java compareTo, note sorting in descending order
+            const out = keys.slice(0,n).map((key) => extractName(key)) //get first n and make human readable
+            console.log(out);
+        });
     }
 }
 
 //*** recent 10 extraction ***//
-function recent10(site){ //recent only for pages
-    if(site.storePages){
-        chrome.storage.local.get([recentCounterKey(site)], (res)=>{
-            const counter = res[recentCounterKey(site)]; //the most recent
-            var stop = (counter - 1)%10; //the least recent
-            recentNth(site, counter, stop)
-        })
+function recentN(site, n, isPages){
+    if((isPages && site.storePages) ||(!isPages && site.storeCats)){
+        storage.get(null, (res) => { //get all items
+            const keys = Object.keys(res).filter((key) => isHashKey(site, key, isPages)) //extract keys of the type we are looking for
+            keys.sort((a,b) => res[b].visited - res[a].visited); //works just like Java compareTo, note smaller date is further in past
+            const out = keys.slice(0,n).map((key) => extractName(key)) //get first n and make human readable
+            console.log(out);
+        });
     }
 }
 
-function recentNth(site, n, stop){
-    if(n!=stop){
-        //have not yet reached stopping point
-        const key = recentNthKey(site,n);
-        chrome.storage.local.get([key], (res)=>{
-            console.log(res[key])
-            topNth(site, (n+1)%10, stop) //recursively get next
-        })
-    }
-}
-
-function clearData(site){
-    //clears all data - use with great caution
-    console.log('data cleared')
-    var key=site.key
-    chrome.storage.local.set({
-        key:{
-            'active': true,
-            'pages': {},
-            'categories': {}
-        }
-    });
-    nk=key+'.active';
-    chrome.storage.local.set({
-        nk:{
-            'active': true,
-            'pages': {},
-            'categories': {}
-        }
-    });
-
-    chrome.storage.sync.get('nk', function(result) {
-        console.log('Value currently is ' + result.nk);
-    });
-
-}
-
-var wikipedia = {
-    key: "wi",        //two letter key
+const wikipedia = {
+    key: 'wi',        //two letter key
     storePages: true, //should pages be tracked?
     storeCats: true,  //should categories be tracked?
 
@@ -191,13 +105,56 @@ var wikipedia = {
     }
 };
 
-// chrome.storage.local.remove('wikipedia')
+const stackexhange = {
+    key: 'se',
+    storePages: true,
+    storeCats: true,
+
+    getTitle: function(){
+        var titleParts = document.title.split("- ")
+        return titleParts[titleParts.length-1]
+    },
+
+    getCategories: function(){
+        const tagElements = document.getElementsByClassName('post-tag');
+        var tags=[]
+        for(var i=0; i<tagElements.length; i++){
+            tags.push(tagElements[i].text)
+        }
+        return tags
+    }
+}
+
+const quora = { //TODO: make quora work
+    key: 'qu',
+    storePages: false,
+    storeCats: false,
+
+    getTitle: function(){},
+
+    getCategories: function(){
+        var moreLinks = document.getElementsByClassName("ViewMoreLink")
+        if(moreLinks){
+            moreLinks[0].getElementsByTagName('a')[0].click();
+        }
+
+        setTimeout(()=>{
+            var topicElements=document.getElementsByClassName('TopicName')
+            var topics=[]
+            for(var i=0; i<topicElements.length; i++){
+                topics.push(topicElements[i].innerText)
+            }
+        },100)
+    }
+}
 
 // activate(wikipedia)
 main(wikipedia)
 
-chrome.storage.sync.get(null, function(items) {
-    var allKeys = Object.keys(items);
-    console.log(allKeys);
-    console.log(items)
-});
+// storage.get(null, function(items) {
+//     var allKeys = Object.keys(items);
+//     console.log(allKeys);
+//     console.log(items)
+// });
+
+// storage.clear() //clear all stored data
