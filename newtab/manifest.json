@@ -1,16 +1,12 @@
 {
-    "name": "New Tab Page",
-    "description": "Override the new tab page with a blank one",
-    "version": "1.0",
+    "name": "Web Tracker",
+    "description": "Track pages and tags visited",
+    "version": "0.1",
     "manifest_version": 2,
     "incognito": "split",
-    "chrome_url_overrides": {
-      "newtab": "index.html"
-    },
     "permissions": [
         "storage"
     ],
-    "content_security_policy": "script-src 'self' https://cdn.anychart.com; object-src 'self'",
     "content_scripts": [
         {
             "js": ["scripts/wikipedia.js"],
@@ -33,4 +29,4 @@
             ]
         }
     ]
-  }
+}
