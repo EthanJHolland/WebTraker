@@ -9,23 +9,10 @@
     ],
     "content_scripts": [
         {
-            "js": ["scripts/wikipedia.js"],
-            "matches": ["https://*.wikipedia.org/wiki/*"]
-        },
-        {
-            "js": ["scripts/quora.js"],
-            "matches": ["https://www.quora.com/*"]
-        },
-        {
-            "js": ["scripts/stackexchange.js"],
+            "js": ["main.js"],
             "matches": [
-                "https://*.stackexchange.com/questions/*",
-                "https://*.stackoverflow.com/questions/*",
-                "https://serverfault.com/questions/*",
-                "https://superuser.com/questions/*",
-                "https://askubuntu.com/questions/*",
-                "https://stackapps.com/questions/*",
-                "https://mathoverflow.net/questions/*"
+                "http://*/*",
+                "https://*/*"
             ]
         }
     ]
