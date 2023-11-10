@@ -1,5 +1,9 @@
 const storage = chrome.storage.local //use local storage
 
+function log(message){
+    console.log("[WT] "+message);
+}
+
 function main(site){
     const now = Date.now(); //use same time for all pages/cats
 
@@ -29,10 +33,11 @@ function main(site){
                         newCount = 1;
                     }
                     storage.set({[key]: {count: newCount, visited: now}})
+                    console.log({key: key, value: {count: newCount, visited: now}});
                 })            
             }
         }else{
-            console.log('[WT] site inactive')
+            log('site inactive')
         }
     })
 }
@@ -75,7 +80,7 @@ function clearSiteData(site){
         var keys = Object.keys(res).filter((key) => {
             return isHashKey(site, key, true) || isHashKey(site, key, false); //either a page or a cat
         })
-        storage.remove(keys, () => console.log('[WT] data cleared'))
+        storage.remove(keys, () => log('data cleared'))
     });
 }
 
@@ -109,12 +114,13 @@ function recentN(site, n, isPages){
 
 //*** site objects ***/
 const wikipedia = {
+    name: 'Wikipedia', //display name
     key: 'wi',        //two letter key
     storePages: true, //should pages be tracked?
     storeCats: true,  //should categories be tracked?
 
     matchStrings : [ //regex strings indicating that a url is of the given site
-        /^https?:\/\/.*\.wikipedia\.org\/wiki\.+//i
+        /^https?:\/\/.*\.wikipedia\.org\/wiki\/.+/i
     ],
 
     getTitle: function(){
@@ -132,6 +138,7 @@ const wikipedia = {
 };
 
 const stackexchange = {
+    name: 'Stack Exchange',
     key: 'se',
     storePages: true,
     storeCats: true,
@@ -157,6 +164,7 @@ const stackexchange = {
 }
 
 const quora = { //TODO: make quora work
+    name: 'Quora',
     key: 'qu',
     storePages: false,
     storeCats: false,
@@ -182,6 +190,7 @@ const quora = { //TODO: make quora work
 }
 
 const fivethirtyeight = {
+    name: 'FiveThirtyEight',
     key: 'ft',
     storePages: false,
     storeCats: true,
@@ -209,7 +218,7 @@ const fivethirtyeight = {
 //     }
 // }
 
-const sites = [wkipedia, stackexchange, quora, fivethirtyeight]; //a site must be in this array to be tracked
+const sites = [wikipedia, stackexchange, quora, fivethirtyeight]; //a site must be in this array to be tracked
 
 //*** main ***/
 const url = window.location.toString(); //get url of current page
@@ -222,5 +231,5 @@ for(let site of sites){
             break;
         }
     }
-    if(found) break; //ensure that only one site gets called 
+    if(found) break; //ensure that only one site gets called
 }
